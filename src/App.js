@@ -5,7 +5,8 @@ import 'firebase/compat/firestore';
 import Chart from 'chart.js/auto';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGoogle } from '@fortawesome/free-brands-svg-icons';
-import { faBars, faSignOutAlt, faEdit, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faSignOutAlt, faEdit, faTrash ,faFileExcel} from '@fortawesome/free-solid-svg-icons';
+import * as XLSX from 'xlsx';
 
 
 import './App.css';
@@ -184,49 +185,55 @@ const ExpenseTracker = () => {
     }
   }, [expenses, renderChart, user]);
   
-  const handleSpeechInput = () => {
-    if (!speechRecognition) return;
-  
-    speechRecognition.onresult = (event) => {
+const handleSpeechInput = () => {
+  if (!speechRecognition) return;
+
+  speechRecognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript.toLowerCase();
       console.log('Transcript:', transcript);
-  
-      // Example command: "Add 100 rupees for groceries on 2024-04-01"
-      const expenseDetails = processSpeechInput(transcript);
-      if (expenseDetails) {
-        // Add expense using the extracted details
-        const { amount, category, date } = expenseDetails;
-        if (!amount || !category || !date) {
-          console.error('Incomplete expense details extracted.');
+    
+      const words = transcript.split(' ');
+      if (words.length < 4) {
+          console.error('Invalid speech input format.');
           return;
-        }
-  
-        // Add the expense using the extracted details
-        addExpense({ amount, category, date });
-      } else {
-        console.error('Unable to extract expense details from speech input.');
       }
-    };
-  
-    speechRecognition.start(); // Start listening
+
+      const amountIndex = words.findIndex(word => !isNaN(parseInt(word))); // Find the first word that is a number
+      const categoryIndex =  words.findIndex((word, index) => index > amountIndex && isNaN(parseInt(word))); // Find the first word after the amount that is not a number
+
+      if (amountIndex === -1 || categoryIndex === -1) {
+          console.error('Invalid speech input format.');
+          return;
+      }
+
+      const amount = parseInt(words[amountIndex]);
+      const category = words.slice(categoryIndex).join(' ');
+
+      // Set the date to today's date
+      const today = new Date();
+      const formattedDate = today.toISOString().split('T')[0];
+
+      // Check if the category is already in the list, if not, prompt the user to add it
+      if (!categories.includes(category)) {
+          const confirmCategoryAddition = window.confirm(`The category "${category}" is not in the list. Do you want to add it?`);
+          if (confirmCategoryAddition) {
+              // Add the new category to the list
+              setCategories(prevCategories => [...prevCategories, category]);
+          } else {
+              console.error('Category not found in the list.');
+              return;
+          }
+      }
+
+      // Add the expense using the extracted details
+      addExpense({ amount, category, date: formattedDate });
   };
-  
-  const processSpeechInput = (transcript) => {
-    // Example command formats: 
-    // - "Add {amount} for {category} on {year} month {month} date {date}"
-    // - "Add {amount} for {category} {year} month {month} date {date}"
-    const match = transcript.match(/add (\d+) (?:rupees|dollars|INR) for (\w+) (?:on )?year (\d{4}) month (\d{2}) date (\d{2})/);
-  
-    if (match) {
-      const [, amount, category, year, month, date] = match;
-      // Convert year, month, and date to the standard format yyyy-mm-dd
-      const formattedDate = `${year}-${month}-${date}`;
-      return { amount, category, date: formattedDate };
-    } else {
-      return null;
-    }
-  };
-  
+
+  speechRecognition.start(); // Start listening
+};
+
+
+
   
   const addExpense = ({ amount, category, date }) => {
     if (!user) return;
@@ -390,6 +397,22 @@ const ExpenseTracker = () => {
     }
   }, [user]);
 
+  const exportDataAsExcel = () => {
+    const dataToExport = expenses.map(expense => ({
+      Amount: expense.amount,
+      Category: expense.category,
+      Date: expense.date
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Expenses');
+
+    XLSX.writeFile(workbook, 'expenses.xlsx');
+  };
+
+  
+
   return (
     <div>
       {user ? (
@@ -402,6 +425,10 @@ const ExpenseTracker = () => {
               <li>Home</li>
               <li>About</li>
               <li>Contact</li>
+              <li><button onClick={exportDataAsExcel}>
+              <FontAwesomeIcon icon={faFileExcel} />
+              Export as Excel
+            </button></li>
             </ul>
             {user && (
               <button onClick={signOut} className="sign-out-btn">
@@ -442,6 +469,7 @@ const ExpenseTracker = () => {
                 Date:
                 <input type="date" value={expense.date} onChange={(e) => setExpense({ ...expense, date: e.target.value })} />
               </label>
+              <h3>Try: add rs 100 insurance</h3>
               <button type="button" onClick={handleSpeechInput}>
                 Add Expense via Speech
                 <span className="tooltip">Click and start speaking to add an expense</span>
