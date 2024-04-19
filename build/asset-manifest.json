@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/Moneysprint.io/static/css/main.a180824b.css",
+    "main.js": "/Moneysprint.io/static/js/main.e49e4047.js",
+    "static/js/453.50385a13.chunk.js": "/Moneysprint.io/static/js/453.50385a13.chunk.js",
+    "index.html": "/Moneysprint.io/index.html",
+    "main.a180824b.css.map": "/Moneysprint.io/static/css/main.a180824b.css.map",
+    "main.e49e4047.js.map": "/Moneysprint.io/static/js/main.e49e4047.js.map",
+    "453.50385a13.chunk.js.map": "/Moneysprint.io/static/js/453.50385a13.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.a180824b.css",
+    "static/js/main.e49e4047.js"
+  ]
+}
